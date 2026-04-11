@@ -1,0 +1,57 @@
+{
+  "id": "1fb4a614ac",
+  "raster_name": "T31UCQ_20250919T105629_TCI_10m",
+  "raster_path": "/home/geoknight/Desktop/Learning/Personal Project/GeoAnnotate/dataset/T31UCQ_20250919T105629_TCI_10m.jp2",
+  "scenario": "crops",
+  "polygon": [
+    [
+      136357.71450873703,
+      6220039.5567629775
+    ],
+    [
+      136308.7318768661,
+      6219704.316119689
+    ],
+    [
+      135902.59433617038,
+      6219788.014234841
+    ],
+    [
+      135749.39989448027,
+      6219845.3255948145
+    ],
+    [
+      135755.28877408957,
+      6219989.619740656
+    ],
+    [
+      135834.84119946897,
+      6220049.414779638
+    ],
+    [
+      135932.43297764566,
+      6220112.393783064
+    ],
+    [
+      135984.91703668996,
+      6220145.484604137
+    ],
+    [
+      136292.41703962654,
+      6220079.611087582
+    ],
+    [
+      136357.71450873703,
+      6220039.5567629775
+    ]
+  ],
+  "bounds": [
+    135751.74556583932,
+    6219710.911687999,
+    136362.93415736847,
+    6220138.743702069
+  ],
+  "png_file": "/home/geoknight/Desktop/Learning/Personal Project/GeoAnnotate/annotations/T31UCQ_20250919T105629_TCI_10m/crops/1fb4a614ac.png",
+  "mask_file": "/home/geoknight/Desktop/Learning/Personal Project/GeoAnnotate/annotations/T31UCQ_20250919T105629_TCI_10m/crops/1fb4a614ac_mask.png",
+  "created_at": "2026-04-11T09:11:58.222866+00:00"
+}

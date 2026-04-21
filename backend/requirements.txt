@@ -6,3 +6,5 @@ rasterio>=1.4.0
 numpy>=1.26.0
 Pillow>=11.0.0
 shapely>=2.0.0
+torch>=2.0.0
+torchvision>=0.15.0

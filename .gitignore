@@ -82,4 +82,7 @@ Thumbs.db
 # Dataset
 # ========================
 dataset/
+models/
 tiles/
+annotations/
+predictions/

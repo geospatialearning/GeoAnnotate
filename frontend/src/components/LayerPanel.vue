@@ -12,6 +12,7 @@ import {
 } from 'quasar'
 import LayersTab from './LayersTab.vue'
 import AnnotateTab from './AnnotateTab.vue'
+import TrainTab from './TrainTab.vue'
 
 const open = defineModel<boolean>('modelValue', { default: true })
 const activeTab = ref('layers')
@@ -57,6 +58,7 @@ const annotateTabRef = ref<InstanceType<typeof AnnotateTab> | null>(null)
           {{ annotateTabRef.annotationCount }}
         </QBadge>
       </QTab>
+      <QTab name="train" icon="model_training" label="Train" no-caps />
     </QTabs>
 
     <QTabPanels v-model="activeTab" animated class="tab-panels">
@@ -66,6 +68,10 @@ const annotateTabRef = ref<InstanceType<typeof AnnotateTab> | null>(null)
 
       <QTabPanel name="annotate" class="q-pa-none panel-content">
         <AnnotateTab ref="annotateTabRef" />
+      </QTabPanel>
+
+      <QTabPanel name="train" class="q-pa-none panel-content">
+        <TrainTab />
       </QTabPanel>
     </QTabPanels>
   </QDrawer>

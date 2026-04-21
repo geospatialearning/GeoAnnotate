@@ -8,7 +8,9 @@ Usage:
 """
 
 import json
+import logging
 import os
+import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -19,6 +21,14 @@ from pydantic import BaseModel
 from starlette.responses import FileResponse
 
 from tile_renderer import RasterRegistry, render_tile, crop_raster_by_polygon
+from segmentation import (
+    train_model,
+    predict_raster,
+    get_training_progress,
+    MODELS_DIR,
+)
+
+logger = logging.getLogger(__name__)
 
 RASTER_EXTENSIONS = {".tif", ".tiff", ".geotiff", ".jp2", ".nc", ".hdf", ".img"}
 DATASET_DIR = Path(os.environ.get("DATASET_DIR", Path(__file__).parent.parent / "dataset")).resolve()
@@ -221,6 +231,138 @@ async def list_annotations(raster_name: str, scenario: str | None = None):
             annotations.append(json.loads(meta_file.read_text()))
 
     return {"annotations": annotations}
+
+
+# ── Model training & inference ─────────────────────────────────────────
+
+class TrainRequest(BaseModel):
+    raster_name: str
+    scenario: str
+    epochs: int = 50
+    learning_rate: float = 1e-3
+    batch_size: int = 4
+
+
+@app.post("/train/")
+async def start_training(req: TrainRequest):
+    """Start model training in a background thread."""
+    # Verify annotations exist
+    scenario_dir = ANNOTATIONS_DIR / req.raster_name / req.scenario
+    if not scenario_dir.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"No annotations found for {req.raster_name}/{req.scenario}",
+        )
+
+    mask_count = len(list(scenario_dir.glob("*_mask.png")))
+    if mask_count == 0:
+        raise HTTPException(status_code=400, detail="No annotation masks found")
+
+    job_id = uuid.uuid4().hex[:10]
+
+    def _run():
+        try:
+            train_model(
+                raster_name=req.raster_name,
+                scenario=req.scenario,
+                annotations_dir=ANNOTATIONS_DIR,
+                epochs=req.epochs,
+                lr=req.learning_rate,
+                batch_size=req.batch_size,
+                job_id=job_id,
+            )
+        except Exception:
+            logger.exception("Training failed for job %s", job_id)
+
+    thread = threading.Thread(target=_run, daemon=True)
+    thread.start()
+
+    return {
+        "job_id": job_id,
+        "raster_name": req.raster_name,
+        "scenario": req.scenario,
+        "annotation_count": mask_count,
+        "epochs": req.epochs,
+    }
+
+
+@app.get("/train/{job_id}")
+async def training_status(job_id: str):
+    """Check training progress."""
+    progress = get_training_progress(job_id)
+    if progress is None:
+        raise HTTPException(status_code=404, detail=f"Training job '{job_id}' not found")
+
+    return {
+        "job_id": job_id,
+        "running": progress.running,
+        "epoch": progress.epoch,
+        "total_epochs": progress.total_epochs,
+        "loss": round(progress.loss, 6),
+        "finished": progress.finished,
+        "error": progress.error,
+        "model_path": progress.model_path,
+    }
+
+
+class PredictRequest(BaseModel):
+    raster_name: str
+    scenario: str
+
+
+@app.post("/predict/")
+async def run_prediction(req: PredictRequest):
+    """Run trained model on the full raster and save georeferenced prediction."""
+    dataset = registry.get(req.raster_name)
+    if dataset is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Raster '{req.raster_name}' not loaded",
+        )
+
+    model_path = MODELS_DIR / req.raster_name / req.scenario / "model.pt"
+    if not model_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"No trained model found for {req.raster_name}/{req.scenario}. Train first.",
+        )
+
+    try:
+        out_path = predict_raster(
+            dataset=dataset,
+            model_path=model_path,
+            raster_name=req.raster_name,
+            scenario=req.scenario,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {e}")
+
+    return {
+        "raster_name": req.raster_name,
+        "scenario": req.scenario,
+        "prediction_file": str(out_path),
+    }
+
+
+@app.get("/models/{raster_name}")
+async def list_models(raster_name: str):
+    """List available trained models for a raster."""
+    base_dir = MODELS_DIR / raster_name
+    if not base_dir.exists():
+        return {"models": []}
+
+    models = []
+    for d in sorted(base_dir.iterdir()):
+        if d.is_dir() and (d / "model.pt").exists():
+            has_prediction = (d / "prediction.tif").exists()
+            models.append({
+                "scenario": d.name,
+                "model_path": str(d / "model.pt"),
+                "has_prediction": has_prediction,
+                "prediction_path": str(d / "prediction.tif") if has_prediction else None,
+            })
+
+    return {"models": models}
 
 
 if __name__ == "__main__":

@@ -40,6 +40,7 @@ const scenarios: AnnotationScenario[] = [
   { label: 'Crops', value: 'crops', color: '#5CAE70' },
   { label: 'Vegetation', value: 'vegetation', color: '#4CAF50' },
   { label: 'Water Bodies', value: 'water_bodies', color: '#2196F3' },
+  { label: 'Others', value: 'other', color: '#9E9E9E' }
 ]
 
 const scenarioOptions = scenarios.map((s) => ({
